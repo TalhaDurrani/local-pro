@@ -1,0 +1,45 @@
+
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Extended user information stored in Firestore",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "phone": { "type": "string" },
+        "role": { "type": "string", "enum": ["seeker", "provider", "admin"] },
+        "walletBalance": { "type": "number" },
+        "subscriptionPlan": { "type": "string", "enum": ["trial", "pro", "elite"] },
+        "subscriptionExpiry": { "type": "string", "format": "date-time" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["uid", "phone", "role"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Records of wallet top-ups and payments",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "amount": { "type": "number" },
+        "type": { "type": "string", "enum": ["credit", "debit"] },
+        "method": { "type": "string", "enum": ["JazzCash", "Easypaisa", "System"] },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "auth": {
+    "providers": ["password", "anonymous"]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile and subscription data"
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Global transaction log"
+    }
+  }
+}

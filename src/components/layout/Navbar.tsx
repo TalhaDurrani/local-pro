@@ -10,7 +10,8 @@ import {
   ShieldCheck, 
   LogOut, 
   Zap,
-  Menu
+  Menu,
+  Loader2
 } from "lucide-react";
 import { 
   DropdownMenu, 
@@ -20,11 +21,21 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import Link from "next/link";
+import { useAuth } from "@/firebase";
+import { signOut } from "firebase/auth";
+import { useRouter } from "next/navigation";
 
 export default function Navbar() {
-  const { user, language, setLanguage, t, switchRole, setUser } = useAppContext();
+  const { user, loading, language, setLanguage, t, switchRole } = useAppContext();
+  const auth = useAuth();
+  const router = useRouter();
 
-  const handleLogout = () => setUser(null);
+  const handleLogout = async () => {
+    if (auth) {
+      await signOut(auth);
+      router.push("/");
+    }
+  };
 
   const LanguageSwitcher = () => (
     <Button 
@@ -61,6 +72,7 @@ export default function Navbar() {
       </div>
 
       <div className="flex items-center gap-2 md:gap-4">
+        {loading && <Loader2 className="h-4 w-4 animate-spin text-pro-sage/50" />}
         <LanguageSwitcher />
 
         {user ? (
@@ -82,6 +94,15 @@ export default function Navbar() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 glass border-pro-sage/20">
+                <div className="px-2 py-1.5 text-xs text-pro-sage/50 border-b border-white/10 mb-1">
+                  {user.phone}
+                </div>
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard">
+                    <LayoutDashboard className="h-4 w-4 mr-2" />
+                    {t.dashboard}
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
                   <LogOut className="h-4 w-4 mr-2" />
                   {t.logout}
@@ -89,7 +110,7 @@ export default function Navbar() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        ) : (
+        ) : !loading && (
           <Button asChild size="sm" className="bg-pro-sage text-pro-slate hover:bg-pro-sage/90">
             <Link href="/auth">{t.login}</Link>
           </Button>
