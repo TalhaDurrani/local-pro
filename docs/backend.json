@@ -3,43 +3,79 @@
   "entities": {
     "UserProfile": {
       "title": "User Profile",
-      "description": "Extended user information stored in Firestore",
+      "description": "Detailed profile for seekers and providers",
       "type": "object",
       "properties": {
         "uid": { "type": "string" },
+        "fullName": { "type": "string" },
         "phone": { "type": "string" },
         "role": { "type": "string", "enum": ["seeker", "provider", "admin"] },
+        "serviceCategory": { "type": "string" },
+        "hourlyRate": { "type": "number" },
+        "address": {
+          "type": "object",
+          "properties": {
+            "province": { "type": "string" },
+            "city": { "type": "string" },
+            "district": { "type": "string" },
+            "districtCode": { "type": "string" },
+            "street": { "type": "string" },
+            "houseNumber": { "type": "string" },
+            "landmark": { "type": "string" },
+            "fullAddress": { "type": "string" }
+          }
+        },
+        "location": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          }
+        },
         "walletBalance": { "type": "number" },
         "subscriptionPlan": { "type": "string", "enum": ["trial", "pro", "elite"] },
         "subscriptionExpiry": { "type": "string", "format": "date-time" },
         "isActive": { "type": "boolean" }
       },
-      "required": ["uid", "phone", "role"]
+      "required": ["uid", "fullName", "phone", "role"]
     },
     "Transaction": {
       "title": "Transaction",
-      "description": "Records of wallet top-ups and payments",
+      "description": "Financial logs for payments and top-ups",
       "type": "object",
       "properties": {
         "userId": { "type": "string" },
         "amount": { "type": "number" },
         "type": { "type": "string", "enum": ["credit", "debit"] },
         "method": { "type": "string", "enum": ["JazzCash", "Easypaisa", "System"] },
+        "status": { "type": "string", "enum": ["pending", "success", "failed"] },
         "timestamp": { "type": "string", "format": "date-time" }
+      }
+    },
+    "SystemSettings": {
+      "title": "System Settings",
+      "description": "Global application configuration",
+      "type": "object",
+      "properties": {
+        "globalFreeTrialActive": { "type": "boolean" }
       }
     }
   },
   "auth": {
-    "providers": ["password", "anonymous"]
+    "providers": ["password"]
   },
   "firestore": {
     "/users/{userId}": {
       "schema": "UserProfile",
-      "description": "User profile and subscription data"
+      "description": "User account data"
     },
     "/transactions/{transactionId}": {
       "schema": "Transaction",
-      "description": "Global transaction log"
+      "description": "Global audit log"
+    },
+    "/settings/global": {
+      "schema": "SystemSettings",
+      "description": "Global kill switch and system flags"
     }
   }
 }
