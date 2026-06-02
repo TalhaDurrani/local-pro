@@ -1,0 +1,17 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "hero-bg",
+      "description": "Professional service providers at work",
+      "imageUrl": "https://picsum.photos/seed/prolocal-hero/1200/800",
+      "imageHint": "professional workers"
+    },
+    {
+      "id": "avatar-1",
+      "description": "User profile avatar",
+      "imageUrl": "https://picsum.photos/seed/avatar1/150/150",
+      "imageHint": "person portrait"
+    }
+  ]
+}
