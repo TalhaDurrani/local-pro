@@ -1,40 +1,21 @@
-
 "use client";
 
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
-import { 
-  Globe, 
-  User, 
-  LayoutDashboard, 
-  ShieldCheck, 
-  LogOut, 
-  Zap,
-  Menu,
-  Loader2
-} from "lucide-react";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
+import { Globe, User, LayoutDashboard, LogOut, Menu, Loader2 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import Link from "next/link";
-import { useAuth } from "@/firebase";
-import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 export default function Navbar() {
-  const { user, loading, language, setLanguage, t, switchRole } = useAppContext();
-  const auth = useAuth();
+  const { user, loading, language, setLanguage, t } = useAppContext();
   const router = useRouter();
 
   const handleLogout = async () => {
-    if (auth) {
-      await signOut(auth);
-      router.push("/");
-    }
+    await supabase.auth.signOut();
+    router.push("/");
   };
 
   const LanguageSwitcher = () => (
@@ -77,16 +58,6 @@ export default function Navbar() {
 
         {user ? (
           <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={switchRole}
-              className="hidden sm:flex border-pro-sage/30 hover:bg-pro-sage/10 text-pro-sage"
-            >
-              <Zap className="h-4 w-4 mr-2" />
-              {user.role === 'seeker' ? t.roleProvider : t.roleSeeker}
-            </Button>
-
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full bg-pro-sage/20 border border-pro-sage/20 overflow-hidden">
@@ -103,7 +74,7 @@ export default function Navbar() {
                     {t.dashboard}
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive cursor-pointer">
                   <LogOut className="h-4 w-4 mr-2" />
                   {t.logout}
                 </DropdownMenuItem>
@@ -128,17 +99,6 @@ export default function Navbar() {
                 <Link href="/dashboard" className="text-xl font-semibold text-pro-sage">
                   {t.dashboard}
                 </Link>
-                {user?.role === 'admin' && (
-                  <Link href="/admin" className="text-xl font-semibold text-pro-sage">
-                    {t.admin}
-                  </Link>
-                )}
-                {user && (
-                  <Button variant="outline" className="justify-start border-pro-sage/30 text-pro-sage" onClick={switchRole}>
-                    <Zap className="h-4 w-4 mr-2" />
-                    {user.role === 'seeker' ? t.roleProvider : t.roleSeeker}
-                  </Button>
-                )}
               </div>
             </SheetContent>
           </Sheet>

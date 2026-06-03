@@ -1,134 +1,226 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAppContext } from "@/context/AppContext";
 import Navbar from "@/components/layout/Navbar";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
-import { ShieldAlert, AlertTriangle, Users, Globe, BarChart3 } from "lucide-react";
-import { useFirestore, useDoc } from "@/firebase";
-import { doc, setDoc, collection, query, getDocs } from "firebase/firestore";
+import { supabase } from "@/lib/supabase";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Loader2, ShieldAlert, Gift, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
-export default function AdminPage() {
-  const { user, t } = useAppContext();
-  const db = useFirestore();
-  
-  const settingsRef = doc(db, "settings", "global");
-  const { data: settings } = useDoc(settingsRef);
-  
-  const [stats, setStats] = useState({ users: 0, transactions: 0 });
+interface ProviderData {
+  id: string;
+  full_name: string;
+  phone: string;
+  city: string;
+  has_active_sub?: boolean;
+}
 
+export default function AdminDashboard() {
+  const { user, loading } = useAppContext();
+  const router = useRouter();
+  
+  const [providers, setProviders] = useState<ProviderData[]>([]);
+  const [fetching, setFetching] = useState(true);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Bulletproof Data Loader
   useEffect(() => {
-    const fetchStats = async () => {
-      const uSnap = await getDocs(collection(db, "users"));
-      const tSnap = await getDocs(collection(db, "transactions"));
-      setStats({
-        users: uSnap.size,
-        transactions: tSnap.size
-      });
-    };
-    fetchStats();
-  }, [db]);
+    let isMounted = true;
 
-  const toggleGlobalKillSwitch = async (val: boolean) => {
+    const loadAdminData = async () => {
+      // Don't do anything if the main context is still loading
+      if (loading) return; 
+
+      // Security check
+      if (!user) {
+        router.push("/");
+        return;
+      }
+      if (user.role !== 'superadmin' && user.role !== 'admin') {
+        router.push("/dashboard");
+        return;
+      }
+
+      try {
+        setFetching(true);
+        setErrorMsg(null);
+
+        // 1. Fetch all profiles with the role of 'provider'
+        const { data: providerProfiles, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('role', 'provider');
+
+        if (profileError) throw new Error(`Profile Fetch Error: ${profileError.message}`);
+
+        // 2. Fetch all completed transactions
+        const { data: txData, error: txError } = await supabase
+          .from('transactions')
+          .select('sender_id')
+          .eq('status', 'completed');
+
+        if (txError) throw new Error(`Transaction Fetch Error: ${txError.message}`);
+
+        // 3. Map out who has a subscription
+        const activeProviderIds = new Set((txData || []).map(tx => tx.sender_id));
+
+        const mergedData = (providerProfiles || []).map(p => ({
+          ...p,
+          has_active_sub: activeProviderIds.has(p.id)
+        })) as ProviderData[];
+
+        if (isMounted) {
+          setProviders(mergedData);
+        }
+      } catch (error: any) {
+        console.error("Admin Dashboard Error:", error);
+        if (isMounted) setErrorMsg(error.message);
+      } finally {
+        if (isMounted) setFetching(false);
+      }
+    };
+
+    loadAdminData();
+
+    // Cleanup function prevents state updates if component unmounts mid-fetch
+    return () => { isMounted = false; };
+  }, [user, loading, router]);
+
+  const grantFreeTrial = async (providerId: string, providerName: string) => {
+    setProcessingId(providerId);
     try {
-      await setDoc(settingsRef, { globalFreeTrialActive: val }, { merge: true });
-      toast({ 
-        title: val ? "Trials Enabled" : "Global Override Triggered",
-        description: val ? "Free trials are now active." : "All trial accounts have been restricted.",
-        variant: val ? "default" : "destructive"
+      // Inject a $0 "completed" transaction to bypass the paywall
+      const { error } = await supabase.from('transactions').insert({
+        sender_id: providerId,
+        amount: 0,
+        transaction_type: 'free_trial',
+        status: 'completed',
       });
-    } catch (e) {
-      toast({ title: "Failed to update settings", variant: "destructive" });
+
+      if (error) throw error;
+
+      toast({ title: `Free Trial granted to ${providerName}!` });
+      
+      // Update local state instantly instead of re-fetching the whole database
+      setProviders(prev => prev.map(p => 
+        p.id === providerId ? { ...p, has_active_sub: true } : p
+      ));
+
+    } catch (error: any) {
+      console.error("Trial grant error:", error);
+      toast({ title: "Failed to grant trial", description: error.message, variant: "destructive" });
+    } finally {
+      setProcessingId(null);
     }
   };
 
-  if (!user || user.role !== 'admin') {
+  if (loading || fetching) {
     return (
-      <div className="min-h-screen bg-pro-slate flex items-center justify-center p-6">
-        <p className="text-pro-sage/60">Unauthorized Access.</p>
+      <div className="min-h-screen bg-pro-slate flex items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-pro-sage" />
       </div>
     );
   }
 
-  const isOverrideActive = settings?.globalFreeTrialActive === false;
+  // If there was a database error, show it clearly instead of spinning forever
+  if (errorMsg) {
+    return (
+      <div className="min-h-screen bg-pro-slate flex flex-col items-center justify-center p-6 text-center">
+        <ShieldAlert className="h-12 w-12 text-rose-500 mb-4" />
+        <h2 className="text-xl text-white font-bold mb-2">Admin Dashboard Error</h2>
+        <p className="text-white/50 max-w-md">{errorMsg}</p>
+        <Button onClick={() => window.location.reload()} className="mt-6 bg-pro-sage text-pro-slate">
+          Retry Connection
+        </Button>
+      </div>
+    );
+  }
+
+  if (!user || (user.role !== 'superadmin' && user.role !== 'admin')) return null;
 
   return (
     <div className="min-h-screen bg-pro-slate">
       <Navbar />
-      <main className="max-w-4xl mx-auto p-6 pt-12">
-        <div className="flex items-center gap-4 mb-10">
-          <div className="w-12 h-12 bg-pro-sage/20 rounded-2xl flex items-center justify-center text-pro-sage">
-            <ShieldAlert className="h-6 w-6" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-headline font-bold text-pro-sage">
-              Superadmin Control Panel
+      
+      <main className="p-6 md:p-12 max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-2">
+            <h1 className="text-3xl md:text-4xl font-headline text-pro-sage font-bold flex items-center gap-3">
+              <ShieldAlert className="h-8 w-8" />
+              Superadmin Control
             </h1>
-            <p className="text-pro-sage/60">Operational metrics and system overrides.</p>
+            <p className="text-pro-sage/70 text-lg">
+              Manage platform users, subscriptions, and overrides.
+            </p>
           </div>
         </div>
 
-        <div className="grid gap-8">
-          <Card className={`glass transition-all duration-500 ${isOverrideActive ? 'border-destructive bg-destructive/10' : 'border-white/20'}`}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <div className="space-y-1">
-                <CardTitle className={`text-xl flex items-center gap-2 ${isOverrideActive ? 'text-destructive' : 'text-pro-sage'}`}>
-                  <AlertTriangle className="h-5 w-5" />
-                  Global Free Trial Override
-                </CardTitle>
-                <CardDescription className="text-pro-sage/50">
-                  Toggling this off instantly terminates all free trial sessions platform-wide.
-                </CardDescription>
-              </div>
-              <Switch 
-                checked={settings?.globalFreeTrialActive ?? true} 
-                onCheckedChange={toggleGlobalKillSwitch}
-                className="data-[state=unchecked]:bg-destructive"
-              />
-            </CardHeader>
-          </Card>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="glass border-white/20">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs text-pro-sage/60 uppercase tracking-widest flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Total Users
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-4xl font-bold text-pro-sage">{stats.users}</p>
-              </CardContent>
-            </Card>
-
-            <Card className="glass border-white/20">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs text-pro-sage/60 uppercase tracking-widest flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4" />
-                  Transactions
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-4xl font-bold text-pro-sage">{stats.transactions}</p>
-              </CardContent>
-            </Card>
-
-            <Card className="glass border-white/20">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs text-pro-sage/60 uppercase tracking-widest flex items-center gap-2">
-                  <Globe className="h-4 w-4" />
-                  System Health
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-xl font-bold text-green-400">OPTIMAL</p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+        <Card className="glass border-white/10 shadow-xl">
+          <CardHeader className="pb-3 border-b border-white/5">
+            <CardTitle className="text-pro-sage text-lg font-headline">Registered Providers</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4 px-0 sm:px-6">
+            <div className="overflow-x-auto">
+              {providers.length === 0 ? (
+                <p className="text-center text-sm text-white/30 py-8">No service providers registered yet.</p>
+              ) : (
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-white/10 text-xs uppercase text-white/40 tracking-wider">
+                      <th className="py-3 px-4">Name</th>
+                      <th className="py-3 px-4">Phone</th>
+                      <th className="py-3 px-4">Location</th>
+                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5 text-sm">
+                    {providers.map((p) => (
+                      <tr key={p.id} className="hover:bg-white/5 transition-colors">
+                        <td className="py-3 px-4 font-medium text-white">{p.full_name}</td>
+                        <td className="py-3 px-4 text-white/70">{p.phone}</td>
+                        <td className="py-3 px-4 text-white/70">{p.city}</td>
+                        <td className="py-3 px-4">
+                          {p.has_active_sub ? (
+                            <span className="flex items-center gap-1 text-xs font-bold text-emerald-400 bg-emerald-400/10 w-fit px-2 py-1 rounded-md">
+                              <CheckCircle2 className="h-3.5 w-3.5" /> Active
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 text-xs font-bold text-rose-400 bg-rose-400/10 w-fit px-2 py-1 rounded-md">
+                              <XCircle className="h-3.5 w-3.5" /> Locked
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <Button 
+                            size="sm"
+                            disabled={p.has_active_sub || processingId === p.id}
+                            onClick={() => grantFreeTrial(p.id, p.full_name)}
+                            className={`font-bold ${p.has_active_sub ? 'bg-white/5 text-white/30' : 'bg-pro-sage text-pro-slate hover:bg-pro-sage/90'}`}
+                          >
+                            {processingId === p.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <>
+                                <Gift className="h-4 w-4 mr-2" />
+                                {p.has_active_sub ? "Subscribed" : "Grant Trial"}
+                              </>
+                            )}
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </main>
     </div>
   );

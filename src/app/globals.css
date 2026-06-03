@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -6,7 +5,7 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 200 20% 15%;
+    --foreground: 0 0% 100%;
     --card: 0 0% 100%;
     --card-foreground: 200 20% 15%;
     --popover: 0 0% 100%;
@@ -36,7 +35,7 @@
     @apply bg-background text-foreground min-h-screen;
   }
   [dir="rtl"] {
-    font-family: 'Noto Nastaliq Urdu', serif;
+    font-family: "Noto Nastaliq Urdu", serif;
   }
 }
 

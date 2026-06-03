@@ -1,21 +1,18 @@
-
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Language, translations } from '@/lib/translations';
-import { useUser, useDoc, useFirestore, useAuth } from '@/firebase';
-import { doc, setDoc, updateDoc } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 
-type Role = 'seeker' | 'provider' | 'admin';
+type Role = 'seeker' | 'provider' | 'admin' | 'superadmin' | 'user';
 
 interface UserProfile {
-  uid: string;
+  id: string;
+  full_name: string;
   phone: string;
   role: Role;
-  isActive: boolean;
-  walletBalance: number;
-  subscriptionPlan: 'trial' | 'pro' | 'elite';
-  subscriptionExpiry: string;
+  city: string;
+  walletBalance?: number; 
 }
 
 interface AppContextType {
@@ -24,75 +21,59 @@ interface AppContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
   t: typeof translations.en;
-  switchRole: () => void;
   isGlobalKillSwitchActive: boolean;
-  toggleGlobalKillSwitch: () => void;
   location: { lat: number; lng: number; address: string } | null;
   setLocation: (loc: { lat: number; lng: number; address: string } | null) => void;
-  updateSubscription: (plan: 'pro' | 'elite') => Promise<void>;
-  addCredits: (amount: number, method: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const { user: authUser, loading: authLoading } = useUser();
-  const db = useFirestore();
-  const auth = useAuth();
-  
-  const userDocRef = useMemo(() => (db && authUser ? doc(db, 'users', authUser.uid) : null), [db, authUser]);
-  const { data: profileData, loading: profileLoading } = useDoc(userDocRef);
-
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
   const [language, setLanguage] = useState<Language>('en');
   const [isGlobalKillSwitchActive, setIsGlobalKillSwitchActive] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
 
   const t = translations[language];
 
-  const user = useMemo(() => {
-    if (!authUser || !profileData) return null;
-    return {
-      uid: authUser.uid,
-      ...profileData
-    } as UserProfile;
-  }, [authUser, profileData]);
+  useEffect(() => {
+    // Check active session on load
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await fetchProfile(session.user.id);
+      } else {
+        setLoading(false);
+      }
+    };
 
-  const switchRole = async () => {
-    if (!userDocRef || !user) return;
-    const nextRole: Role = user.role === 'seeker' ? 'provider' : 'seeker';
-    updateDoc(userDocRef, { role: nextRole });
-  };
+    checkSession();
 
-  const updateSubscription = async (plan: 'pro' | 'elite') => {
-    if (!userDocRef) return;
-    const expiryDate = new Date();
-    expiryDate.setMonth(expiryDate.getMonth() + 1);
-    updateDoc(userDocRef, { 
-      subscriptionPlan: plan,
-      subscriptionExpiry: expiryDate.toISOString()
+    // Listen for auth changes (login/logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        await fetchProfile(session.user.id);
+      } else {
+        setUser(null);
+        setLoading(false);
+      }
     });
-  };
 
-  const addCredits = async (amount: number, method: string) => {
-    if (!userDocRef || !user || !db) return;
-    const newBalance = (user.walletBalance || 0) + amount;
-    
-    // Update user balance
-    updateDoc(userDocRef, { walletBalance: newBalance });
-    
-    // Log transaction
-    const transRef = doc(db, 'transactions', `${user.uid}_${Date.now()}`);
-    setDoc(transRef, {
-      userId: user.uid,
-      amount,
-      type: 'credit',
-      method,
-      timestamp: new Date().toISOString()
-    });
-  };
+    return () => subscription.unsubscribe();
+  }, []);
 
-  const toggleGlobalKillSwitch = () => {
-    setIsGlobalKillSwitchActive(!isGlobalKillSwitchActive);
+  const fetchProfile = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle(); // FIX: Changed from .single() to .maybeSingle() to prevent 406 crashes
+      
+    if (data && !error) {
+      setUser(data as UserProfile);
+    }
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -104,17 +85,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     <AppContext.Provider
       value={{
         user,
-        loading: authLoading || profileLoading,
+        loading,
         language,
         setLanguage,
         t,
-        switchRole,
         isGlobalKillSwitchActive,
-        toggleGlobalKillSwitch,
         location,
         setLocation,
-        updateSubscription,
-        addCredits,
       }}
     >
       {children}

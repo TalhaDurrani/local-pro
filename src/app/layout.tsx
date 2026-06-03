@@ -1,9 +1,7 @@
-
 import type { Metadata } from 'next';
 import './globals.css';
 import { AppProvider } from '@/context/AppContext';
 import { Toaster } from '@/components/ui/toaster';
-import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
   title: 'ProLocal | Trusted Local Services',
@@ -23,12 +21,10 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Noto+Nastaliq+Urdu:wght@400..700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased transition-colors duration-300">
-        <FirebaseClientProvider>
-          <AppProvider>
-            {children}
-            <Toaster />
-          </AppProvider>
-        </FirebaseClientProvider>
+        <AppProvider>
+          {children}
+          <Toaster />
+        </AppProvider>
       </body>
     </html>
   );
