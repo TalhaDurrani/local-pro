@@ -13,7 +13,8 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
 
 export default function AuthForm() {
-  const [isLogin, setIsLogin] = useState(false);
+  const [isLogin, setIsLogin] = useState(true);
+  const { t } = useAppContext();
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -25,7 +26,7 @@ export default function AuthForm() {
   
   const router = useRouter();
 
-  const handleAuth = async (e: React.FormEvent) => {
+const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
     
@@ -37,7 +38,7 @@ export default function AuthForm() {
 
     try {
       if (isLogin) {
-        // --- LOG IN FLOW (Email & Password Only) ---
+        // --- LOG IN FLOW (Using Real Email) ---
         const { error } = await supabase.auth.signInWithPassword({
           email: email.trim(),
           password: password,
@@ -45,12 +46,12 @@ export default function AuthForm() {
         
         if (error) throw error;
         
-        toast({ title: "Welcome back!" });
+        toast({ title: t.welcomeBackTitle });
         router.push("/dashboard");
 
       } else {
-        // --- SIGN UP FLOW ---
-        if (!cleanPhone) throw new Error("Please enter a valid phone number.");
+        // --- SIGN UP FLOW (Using Real Email + Strict Phone Check) ---
+        if (!cleanPhone) throw new Error(t.validPhoneNumber);
 
         // 1. Explicitly check if the phone number is already registered
         const { data: existingPhone } = await supabase
@@ -63,7 +64,7 @@ export default function AuthForm() {
           throw new Error("This phone number is already registered to another account.");
         }
 
-        // 2. Create the Auth Account using Email
+        // 2. Create the Auth Account using the REAL Email
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email: email.trim(),
           password: password,
@@ -100,14 +101,14 @@ export default function AuthForm() {
             }
           }
 
-          toast({ title: "Account created successfully!" });
+          toast({ title: t.accountCreatedSuccessfully });
           router.push("/onboarding");
         }
       }
     } catch (error: any) {
       console.error("Auth Error Details:", error);
       toast({
-        title: "Authentication Failed",
+        title: t.authenticationFailed,
         description: error.message,
         variant: "destructive"
       });
@@ -117,10 +118,10 @@ export default function AuthForm() {
   };
 
   return (
-    <Card className="w-full max-w-xl glass border-white/20">
+    <Card className="w-full max-w-xl glass border-border shadow-xl">
       <CardHeader>
-        <CardTitle className="text-2xl text-pro-sage font-headline text-center">
-          {isLogin ? "Welcome Back" : "Join ProLocal"}
+        <CardTitle className="text-2xl text-foreground font-headline text-center">
+          {isLogin ? t.welcomeBackTitle : t.joinProLocal}
         </CardTitle>
       </CardHeader>
       <form onSubmit={handleAuth}>
@@ -129,14 +130,14 @@ export default function AuthForm() {
           {/* FULL NAME (Signup Only) */}
           {!isLogin && (
             <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-              <Label className="text-pro-sage/80">Full Name</Label>
+              <Label className="text-foreground/70">{t.fullName}</Label>
               <div className="relative">
-                <User className="absolute left-3 top-3 h-4 w-4 text-pro-sage/60" />
+                <User className="absolute left-3 top-3 h-4 w-4 text-foreground/50" />
                 <Input
-                  placeholder="John Doe"
+                  placeholder={t.fullNamePlaceholder}
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="pl-10 bg-white/5 border-white/20 text-pro-sage"
+                  className="pl-10 bg-muted text-foreground border-border"
                   required={!isLogin}
                 />
               </div>
@@ -148,15 +149,15 @@ export default function AuthForm() {
             
             {/* EMAIL (Always visible) */}
             <div className="space-y-2">
-              <Label className="text-pro-sage/80">Email Address</Label>
+              <Label className="text-foreground/70">{t.emailAddress}</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-pro-sage/60" />
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-foreground/50" />
                 <Input
                   type="email"
-                  placeholder="you@example.com"
+                  placeholder={t.emailPlaceholder}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10 bg-white/5 border-white/20 text-pro-sage"
+                  className="pl-10 bg-muted text-foreground border-border"
                   required
                 />
               </div>
@@ -165,15 +166,15 @@ export default function AuthForm() {
             {/* PHONE (Signup Only) */}
             {!isLogin && (
               <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                <Label className="text-pro-sage/80">Phone Number</Label>
+                <Label className="text-foreground/70">{t.phoneNumber}</Label>
                 <div className="relative">
-                  <Phone className="absolute left-3 top-3 h-4 w-4 text-pro-sage/60" />
+                  <Phone className="absolute left-3 top-3 h-4 w-4 text-foreground/50" />
                   <Input
                     type="tel"
-                    placeholder="03001234567"
+                    placeholder={t.phonePlaceholder}
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="pl-10 bg-white/5 border-white/20 text-pro-sage"
+                    className="pl-10 bg-muted text-foreground border-border"
                     required={!isLogin}
                   />
                 </div>
@@ -183,15 +184,15 @@ export default function AuthForm() {
 
           {/* PASSWORD (Always visible) */}
           <div className="space-y-2">
-            <Label className="text-pro-sage/80">Password</Label>
+            <Label className="text-foreground/70">{t.password}</Label>
             <div className="relative">
-              <Lock className="absolute left-3 top-3 h-4 w-4 text-pro-sage/60" />
+              <Lock className="absolute left-3 top-3 h-4 w-4 text-foreground/50" />
               <Input
                 type="password"
-                placeholder="••••••••"
+                placeholder={t.passwordPlaceholder}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="pl-10 bg-white/5 border-white/20 text-pro-sage"
+                className="pl-10 bg-muted text-foreground border-border"
                 required
                 minLength={6}
               />
@@ -202,19 +203,19 @@ export default function AuthForm() {
           {!isLogin && (
             <>
               <div className="space-y-3 py-2 animate-in fade-in slide-in-from-top-2">
-                <Label className="text-pro-sage/80">I want to...</Label>
+                <Label className="text-foreground/70">{t.iWantTo}</Label>
                 <RadioGroup 
                   value={role} 
                   onValueChange={(v) => setRole(v as any)}
                   className="flex gap-4"
                 >
-                  <div className="flex items-center space-x-2 bg-white/5 p-3 rounded-lg border border-white/10 flex-1 cursor-pointer">
+                  <div className="flex items-center space-x-2 bg-muted p-3 rounded-lg border border-border flex-1 cursor-pointer">
                     <RadioGroupItem value="seeker" id="seeker" />
-                    <Label htmlFor="seeker" className="text-pro-sage cursor-pointer">Hire Services</Label>
+                    <Label htmlFor="seeker" className="text-foreground cursor-pointer">{t.hireServices}</Label>
                   </div>
-                  <div className="flex items-center space-x-2 bg-white/5 p-3 rounded-lg border border-white/10 flex-1 cursor-pointer">
+                  <div className="flex items-center space-x-2 bg-muted p-3 rounded-lg border border-border flex-1 cursor-pointer">
                     <RadioGroupItem value="provider" id="provider" />
-                    <Label htmlFor="provider" className="text-pro-sage cursor-pointer">Offer Services</Label>
+                    <Label htmlFor="provider" className="text-foreground cursor-pointer">{t.offerServices}</Label>
                   </div>
                 </RadioGroup>
               </div>
@@ -223,26 +224,26 @@ export default function AuthForm() {
               {role === 'provider' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
                   <div className="space-y-2">
-                    <Label className="text-pro-sage/80">Service Category</Label>
+                    <Label className="text-foreground/70">{t.serviceCategory}</Label>
                     <div className="relative">
-                      <Briefcase className="absolute left-3 top-3 h-4 w-4 text-pro-sage/60" />
+                      <Briefcase className="absolute left-3 top-3 h-4 w-4 text-foreground/50" />
                       <Input
-                        placeholder="e.g. Plumbing"
+                        placeholder={t.serviceCategory}
                         value={category}
                         onChange={(e) => setCategory(e.target.value)}
-                        className="pl-10 bg-white/5 border-white/20 text-pro-sage"
+                        className="pl-10 bg-muted text-foreground border-border"
                         required={!isLogin && role === 'provider'}
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-pro-sage/80">Hourly Rate (Rs)</Label>
+                    <Label className="text-foreground/70">{t.hourlyRate}</Label>
                     <Input
                       type="number"
                       placeholder="1500"
                       value={rate}
                       onChange={(e) => setRate(e.target.value)}
-                      className="bg-white/5 border-white/20 text-pro-sage"
+                      className="bg-muted text-foreground border-border"
                       required={!isLogin && role === 'provider'}
                     />
                   </div>
@@ -258,19 +259,19 @@ export default function AuthForm() {
                 setIsLogin(!isLogin);
                 setLoading(false);
               }}
-              className="text-sm text-pro-sage/80 hover:text-pro-sage underline underline-offset-4"
+              className="text-sm text-foreground/70 hover:text-foreground underline underline-offset-4"
             >
-              {isLogin ? "Need an account? Sign up" : "Already have an account? Log in"}
+              {isLogin ? t.needAccount : t.alreadyHaveAccount}
             </button>
           </div>
         </CardContent>
         <CardFooter>
           <Button 
             type="submit" 
-            className="w-full bg-pro-sage text-pro-slate hover:bg-pro-sage/90 font-bold"
+            className="w-full bg-accent text-accent-foreground hover:bg-accent/90 font-bold"
             disabled={loading}
           >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (isLogin ? "Log In" : "Create Account")}
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (isLogin ? t.logIn : t.createAccount)}
             {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
           </Button>
         </CardFooter>

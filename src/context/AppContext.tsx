@@ -20,7 +20,10 @@ interface AppContextType {
   loading: boolean;
   language: Language;
   setLanguage: (lang: Language) => void;
+  theme: 'light' | 'dark';
+  setTheme: (theme: 'light' | 'dark') => void;
   t: typeof translations.en;
+  logout: () => Promise<void>;
   isGlobalKillSwitchActive: boolean;
   location: { lat: number; lng: number; address: string } | null;
   setLocation: (loc: { lat: number; lng: number; address: string } | null) => void;
@@ -32,10 +35,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [language, setLanguage] = useState<Language>('en');
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [isGlobalKillSwitchActive, setIsGlobalKillSwitchActive] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
 
   const t = translations[language];
+
+  const logout = async () => {
+    setLoading(true);
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Logout failed:', error.message);
+    }
+    setUser(null);
+    setLoading(false);
+  };
 
   useEffect(() => {
     // Check active session on load
@@ -44,6 +58,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         await fetchProfile(session.user.id);
       } else {
+        setUser(null);
         setLoading(false);
       }
     };
@@ -64,6 +79,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const fetchProfile = async (userId: string) => {
+    setLoading(true);
+    setUser(null);
+
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -72,9 +90,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       
     if (data && !error) {
       setUser(data as UserProfile);
+    } else {
+      setUser(null);
     }
     setLoading(false);
   };
+
+  useEffect(() => {
+    const storedTheme = window.localStorage.getItem('theme');
+    if (storedTheme === 'light' || storedTheme === 'dark') {
+      setTheme(storedTheme);
+    } else {
+      const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+      setTheme(prefersDark ? 'dark' : 'light');
+    }
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+    window.localStorage.setItem('theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     document.documentElement.dir = language === 'ur' ? 'rtl' : 'ltr';
@@ -88,7 +123,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         loading,
         language,
         setLanguage,
+        theme,
+        setTheme,
         t,
+        logout,
         isGlobalKillSwitchActive,
         location,
         setLocation,

@@ -2,7 +2,7 @@
 
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
-import { Globe, User, LayoutDashboard, LogOut, Menu, Loader2 } from "lucide-react";
+import { Globe, User, LayoutDashboard, LogOut, Menu, Loader2, Moon, Sun } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import Link from "next/link";
@@ -10,11 +10,11 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 export default function Navbar() {
-  const { user, loading, language, setLanguage, t } = useAppContext();
+  const { user, loading, language, setLanguage, theme, setTheme, t, logout } = useAppContext();
   const router = useRouter();
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await logout();
     router.push("/");
   };
 
@@ -33,17 +33,17 @@ export default function Navbar() {
   return (
     <nav className="sticky top-0 z-50 w-full glass-dark py-3 px-4 md:px-8 flex items-center justify-between">
       <div className="flex items-center gap-8">
-        <Link href="/" className="text-2xl font-bold tracking-tighter text-pro-sage">
+        <Link href="/" className="text-2xl font-bold tracking-tighter text-accent">
           {t.appName}
         </Link>
         <div className="hidden md:flex items-center gap-4">
           {user && (
             <>
-              <Link href="/dashboard" className="text-sm font-medium text-pro-sage/80 hover:text-pro-sage transition-colors">
+              <Link href="/dashboard" className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors">
                 {t.dashboard}
               </Link>
               {user.role === 'admin' && (
-                <Link href="/admin" className="text-sm font-medium text-pro-sage/80 hover:text-pro-sage transition-colors">
+                <Link href="/admin" className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors">
                   {t.admin}
                 </Link>
               )}
@@ -53,19 +53,29 @@ export default function Navbar() {
       </div>
 
       <div className="flex items-center gap-2 md:gap-4">
-        {loading && <Loader2 className="h-4 w-4 animate-spin text-pro-sage/50" />}
+        {loading && <Loader2 className="h-4 w-4 animate-spin text-accent/50" />}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          className="gap-2 font-medium"
+          aria-label={theme === 'dark' ? t.lightMode : t.darkMode}
+        >
+          {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          {theme === 'dark' ? t.lightMode : t.darkMode}
+        </Button>
         <LanguageSwitcher />
 
         {user ? (
           <div className="flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full bg-pro-sage/20 border border-pro-sage/20 overflow-hidden">
-                  <User className="h-5 w-5 text-pro-sage" />
+                <Button variant="ghost" size="icon" className="rounded-full bg-accent/20 border border-accent/20 overflow-hidden">
+                  <User className="h-5 w-5 text-accent-foreground" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 glass border-pro-sage/20">
-                <div className="px-2 py-1.5 text-xs text-pro-sage/50 border-b border-white/10 mb-1">
+              <DropdownMenuContent align="end" className="w-56 glass border-accent/20">
+                <div className="px-2 py-1.5 text-xs text-foreground/70 border-b border-border mb-1">
                   {user.phone}
                 </div>
                 <DropdownMenuItem asChild>
@@ -82,7 +92,7 @@ export default function Navbar() {
             </DropdownMenu>
           </div>
         ) : !loading && (
-          <Button asChild size="sm" className="bg-pro-sage text-pro-slate hover:bg-pro-sage/90">
+          <Button asChild size="sm" className="bg-accent text-accent-foreground hover:bg-accent/90">
             <Link href="/auth">{t.login}</Link>
           </Button>
         )}
@@ -91,12 +101,12 @@ export default function Navbar() {
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon">
-                <Menu className="h-6 w-6 text-pro-sage" />
+                <Menu className="h-6 w-6 text-accent" />
               </Button>
             </SheetTrigger>
-            <SheetContent side={language === 'ur' ? 'right' : 'left'} className="glass-dark border-pro-sage/20">
+            <SheetContent side={language === 'ur' ? 'right' : 'left'} className="glass-dark border-accent/20">
               <div className="flex flex-col gap-6 mt-8">
-                <Link href="/dashboard" className="text-xl font-semibold text-pro-sage">
+                <Link href="/dashboard" className="text-xl font-semibold text-accent">
                   {t.dashboard}
                 </Link>
               </div>

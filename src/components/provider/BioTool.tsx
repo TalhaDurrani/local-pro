@@ -45,28 +45,28 @@ export default function BioTool() {
   };
 
   return (
-    <Card className="glass border-white/20 overflow-hidden">
-      <CardHeader className="bg-pro-sage/10 border-b border-white/10">
-        <CardTitle className="text-lg text-pro-sage flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-pro-sage" />
+    <Card className="glass border-border overflow-hidden">
+      <CardHeader className="bg-accent/10 border-b border-border">
+        <CardTitle className="text-lg text-accent flex items-center gap-2">
+          <Sparkles className="h-5 w-5 text-accent" />
           {t.bioGenerator}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-6 space-y-4">
         <div className="space-y-2">
-          <label className="text-sm font-medium text-pro-sage/80">{t.experience}</label>
+          <label className="text-sm font-medium text-foreground/70">{t.experience}</label>
           <Textarea 
             value={experience}
             onChange={(e) => setExperience(e.target.value)}
             placeholder="e.g. 5 years of plumbing experience, certified expert in leak repairs..."
-            className="bg-white/5 border-white/20 text-pro-sage min-h-[100px]"
+            className="bg-muted text-foreground border-border min-h-[100px]"
           />
         </div>
         
         <Button 
           onClick={handleGenerate} 
           disabled={loading || !experience}
-          className="w-full bg-pro-sage text-pro-slate hover:bg-pro-sage/90"
+          className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
           {t.generate}
@@ -75,12 +75,12 @@ export default function BioTool() {
         {generatedBio && (
           <div className="mt-6 space-y-3 animate-in fade-in slide-in-from-top-4 duration-500">
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-bold text-pro-sage uppercase tracking-wider">{t.refinedBio}</h4>
-              <Button variant="ghost" size="sm" onClick={copyToClipboard} className="text-pro-sage hover:bg-pro-sage/10">
+              <h4 className="text-sm font-bold text-foreground uppercase tracking-wider">{t.refinedBio}</h4>
+              <Button variant="ghost" size="sm" onClick={copyToClipboard} className="text-accent hover:bg-accent/10">
                 {copied ? <CheckCircle2 className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
               </Button>
             </div>
-            <div className="p-4 bg-pro-charcoal/50 rounded-lg border border-pro-sage/30 text-pro-sage/90 text-sm leading-relaxed italic">
+            <div className="p-4 bg-muted/70 rounded-lg border border-accent/30 text-foreground/90 text-sm leading-relaxed italic">
               {generatedBio}
             </div>
           </div>

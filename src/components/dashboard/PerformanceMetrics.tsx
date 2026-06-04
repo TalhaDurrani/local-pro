@@ -31,30 +31,30 @@ export default function PerformanceMetrics() {
 
   return (
     <div className="grid gap-6 md:grid-cols-2">
-      <Card className="glass border-white/20">
+      <Card className="glass border-border">
         <CardHeader>
-          <CardTitle className="text-pro-sage flex items-center gap-2">
-            <CheckCircle className="h-5 w-5" />
+          <CardTitle className="text-accent flex items-center gap-2">
+            <CheckCircle className="h-5 w-5 text-accent" />
             {t.metricsTitle}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center">
-              <span className="text-xs text-pro-sage/60 block mb-1 uppercase tracking-wider">{t.delivered}</span>
-              <span className="text-2xl font-bold text-pro-sage">124</span>
+            <div className="p-4 rounded-xl bg-muted/10 border border-border text-center">
+              <span className="text-xs text-foreground/60 block mb-1 uppercase tracking-wider">{t.delivered}</span>
+              <span className="text-2xl font-bold text-foreground">124</span>
             </div>
-            <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center">
-              <span className="text-xs text-pro-sage/60 block mb-1 uppercase tracking-wider">{t.rating}</span>
-              <div className="flex items-center justify-center gap-1 text-2xl font-bold text-pro-sage">
-                4.8 <Star className="h-5 w-5 fill-pro-sage text-pro-sage" />
+            <div className="p-4 rounded-xl bg-muted/10 border border-border text-center">
+              <span className="text-xs text-foreground/60 block mb-1 uppercase tracking-wider">{t.rating}</span>
+              <div className="flex items-center justify-center gap-1 text-2xl font-bold text-foreground">
+                4.8 <Star className="h-5 w-5 text-accent" />
               </div>
             </div>
           </div>
 
           <div className="space-y-2">
             <div className="flex justify-between items-end">
-              <span className="text-sm font-medium text-pro-sage/80 flex items-center gap-2">
+              <span className="text-sm font-medium text-foreground/70 flex items-center gap-2">
                 <Clock className="h-4 w-4" />
                 {t.trialStatus}
               </span>
@@ -62,7 +62,7 @@ export default function PerformanceMetrics() {
                 {isGlobalKillSwitchActive ? t.terminated : '12 Days Left'}
               </span>
             </div>
-            <Progress value={isGlobalKillSwitchActive ? 0 : 60} className="h-2 bg-white/10" />
+            <Progress value={isGlobalKillSwitchActive ? 0 : 60} className="h-2 bg-muted/10" />
             {isGlobalKillSwitchActive && (
               <p className="text-[10px] text-destructive flex items-center gap-1">
                 <AlertTriangle className="h-3 w-3" />
@@ -73,9 +73,9 @@ export default function PerformanceMetrics() {
         </CardContent>
       </Card>
 
-      <Card className="glass border-white/20">
+      <Card className="glass border-border">
         <CardHeader>
-          <CardTitle className="text-pro-sage text-sm font-medium">Activity Overview</CardTitle>
+          <CardTitle className="text-foreground text-sm font-medium">Activity Overview</CardTitle>
         </CardHeader>
         <CardContent className="h-[200px]">
           <ResponsiveContainer width="100%" height="100%">

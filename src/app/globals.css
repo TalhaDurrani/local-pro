@@ -5,25 +5,49 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 0 0% 100%;
+    --foreground: 222 47% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 200 20% 15%;
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 200 20% 15%;
-    --primary: 187 22% 26%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 94 13% 80%;
-    --secondary-foreground: 187 22% 26%;
-    --muted: 94 13% 95%;
-    --muted-foreground: 200 20% 45%;
-    --accent: 94 13% 80%;
-    --accent-foreground: 187 22% 26%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 200 20% 89.8%;
-    --input: 200 20% 89.8%;
-    --ring: 187 22% 26%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 206 100% 36%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 218 30% 18%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 216 33% 97%;
+    --muted-foreground: 215 33% 42%;
+    --accent: 82 34% 27%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 4 90% 58%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 47% 90%;
+    --input: 214 47% 90%;
+    --ring: 215 84% 65%;
     --radius: 0.75rem;
+    color-scheme: light;
+  }
+
+  .dark {
+    --background: 217 17% 16%;
+    --foreground: 210 40% 98%;
+    --card: 217 17% 16%;
+    --card-foreground: 210 40% 98%;
+    --popover: 217 17% 16%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 212 100% 55%;
+    --primary-foreground: 222 47% 13%;
+    --secondary: 210 14% 18%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 20% 30%;
+    --muted-foreground: 210 40% 98%;
+    --accent: 82 34% 27%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 4 90% 58%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 217 34% 18%;
+    --input: 217 34% 18%;
+    --ring: 215 100% 75%;
+    color-scheme: dark;
   }
 }
 
@@ -31,19 +55,24 @@
   * {
     @apply border-border;
   }
+  html {
+    scroll-behavior: smooth;
+  }
   body {
-    @apply bg-background text-foreground min-h-screen;
+    @apply bg-background text-foreground min-h-screen antialiased transition-colors duration-300;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
   }
   [dir="rtl"] {
-    font-family: "Noto Nastaliq Urdu", serif;
+    font-family: 'Noto Nastaliq Urdu', serif;
   }
 }
 
 @layer components {
   .glass {
-    @apply bg-white/15 backdrop-blur-[16px] border border-white/20 shadow-xl;
+    @apply bg-background/80 backdrop-blur-[16px] border border-border shadow-xl;
   }
   .glass-dark {
-    @apply bg-black/15 backdrop-blur-[16px] border border-white/10 shadow-xl;
+    @apply bg-background/70 backdrop-blur-[16px] border border-border shadow-xl;
   }
 }

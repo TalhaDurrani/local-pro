@@ -41,35 +41,35 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-pro-slate">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       <main className="flex items-center justify-center p-6 pt-20">
-        <Card className="w-full max-w-md glass border-white/20">
+        <Card className="w-full max-w-md glass border-border">
           <CardHeader>
-            <CardTitle className="text-2xl text-pro-sage flex items-center gap-3">
+            <CardTitle className="text-2xl text-foreground flex items-center gap-3">
               <MapPin className="h-6 w-6" />
-              Location Setup
+              {t.locationSetup}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <p className="text-pro-sage/70 font-light leading-relaxed">
-              To connect you with the best nearby service providers, we need to precisely map your location.
+            <p className="text-foreground/70 font-light leading-relaxed">
+              {t.locationSetupDesc}
             </p>
             
-            <div className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${location ? 'border-pro-sage bg-pro-sage/10' : 'border-dashed border-white/20'}`}>
+            <div className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${location ? 'border-accent bg-accent/10' : 'border-dashed border-border'}`}>
               {location ? (
                 <>
-                  <CheckCircle2 className="h-10 w-10 text-pro-sage" />
+                  <CheckCircle2 className="h-10 w-10 text-accent" />
                   <div className="text-center">
-                    <p className="text-pro-sage font-bold">{t.locationStatus}</p>
-                    <p className="text-pro-sage/60 text-xs mt-1">{location.address}</p>
+                    <p className="text-foreground font-bold">{t.locationStatus}</p>
+                    <p className="text-foreground/60 text-xs mt-1">{location.address}</p>
                   </div>
                 </>
               ) : (
                 <Button 
                   onClick={handleLocate} 
                   disabled={locating}
-                  className="bg-pro-sage text-pro-slate hover:bg-pro-sage/90"
+                  className="bg-accent text-accent-foreground hover:bg-accent/90"
                 >
                   {locating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <MapPin className="h-4 w-4 mr-2" />}
                   {t.onboardingLocation}
@@ -80,10 +80,10 @@ export default function OnboardingPage() {
           <CardFooter>
             <Button 
               disabled={!location} 
-              className="w-full bg-pro-sage text-pro-slate hover:bg-pro-sage/90"
+              className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
               onClick={() => router.push("/dashboard")}
             >
-              Finish Setup
+              {t.finishSetup}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </CardFooter>
