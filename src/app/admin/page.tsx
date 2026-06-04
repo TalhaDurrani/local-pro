@@ -17,6 +17,10 @@ interface ProviderData {
   city: string;
   has_active_sub?: boolean;
   is_banned?: boolean;
+  email?: string | null;
+  created_at?: string | null;
+  display_address?: string | null;
+  area?: string | null;
 }
 
 export default function AdminDashboard() {
@@ -132,7 +136,10 @@ export default function AdminDashboard() {
                 <thead>
                   <tr className="border-b text-xs uppercase text-muted-foreground">
                     <th className="py-3 px-4">Name</th>
-                    <th className="py-3 px-4">Phone</th>
+                      <th className="py-3 px-4">Email</th>
+                      <th className="py-3 px-4">Phone</th>
+                      <th className="py-3 px-4">Joined</th>
+                      <th className="py-3 px-4">Location</th>
                     <th className="py-3 px-4">Sub Status</th>
                     <th className="py-3 px-4">Account Status</th>
                     <th className="py-3 px-4 text-right">Actions</th>
@@ -141,8 +148,11 @@ export default function AdminDashboard() {
                 <tbody className="divide-y">
                   {providers.map((p) => (
                     <tr key={p.id} className={p.is_banned ? 'opacity-50 bg-destructive/5' : ''}>
-                      <td className="py-3 px-4 font-medium">{p.full_name}</td>
-                      <td className="py-3 px-4 text-muted-foreground">{p.phone}</td>
+                        <td className="py-3 px-4 font-medium">{p.full_name}</td>
+                        <td className="py-3 px-4 text-muted-foreground">{p.email || '—'}</td>
+                        <td className="py-3 px-4 text-muted-foreground">{p.phone}</td>
+                        <td className="py-3 px-4 text-muted-foreground">{p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}</td>
+                        <td className="py-3 px-4 text-muted-foreground">{p.display_address || (p.city ? `${p.city}${p.area ? ', ' + p.area : ''}` : '—')}</td>
                       <td className="py-3 px-4">
                         {p.has_active_sub ? <span className="text-green-600 bg-green-100 px-2 py-1 rounded-md text-xs font-bold">Active</span> : <span className="text-red-600 bg-red-100 px-2 py-1 rounded-md text-xs font-bold">Expired</span>}
                       </td>

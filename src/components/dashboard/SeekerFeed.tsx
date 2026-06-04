@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAppContext } from "@/context/AppContext";
+import useLocation from "@/hooks/useLocation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MapPin, Briefcase, Phone, Loader2, Star, UserCircle, Send } from "lucide-react";
@@ -20,10 +21,12 @@ interface Provider {
 }
 
 export default function SeekerFeed() {
-  const { user, location } = useAppContext();
+  const { user, location, setLocation } = useAppContext();
+  const { loading: locating, fetchLocation, saveToProfile } = useLocation();
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [requestingId, setRequestingId] = useState<string | null>(null);
+  const [locationMessage, setLocationMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchActiveProviders = async () => {
@@ -55,15 +58,30 @@ export default function SeekerFeed() {
 
   const handleRequestService = async (providerId: string, providerName: string) => {
     if (!user) return;
-    
-    // We ideally want their location mapped before they request a service
-    if (!location) {
-      toast({ 
-        title: "Location Required", 
-        description: "Please update your location in your profile so the provider can find you.", 
-        variant: "destructive" 
-      });
-      return;
+
+    let currentLocation = location;
+
+    if (!currentLocation) {
+      setLocationMessage("Detecting your location before sending the request...");
+      try {
+        const result = await fetchLocation();
+        const newLocation = {
+          lat: result.coords.latitude,
+          lng: result.coords.longitude,
+          address: result.displayAddress,
+        };
+        setLocation(newLocation);
+        currentLocation = newLocation;
+        try {
+          await saveToProfile();
+        } catch (saveErr: any) {
+          console.warn("Unable to save seeker location to profile:", saveErr);
+        }
+        setLocationMessage(null);
+      } catch (error: any) {
+        setLocationMessage("Please set your location in the profile or onboarding before requesting a service.");
+        return;
+      }
     }
 
     setRequestingId(providerId);
@@ -72,8 +90,8 @@ export default function SeekerFeed() {
         seeker_id: user.id,
         provider_id: providerId,
         status: 'pending',
-        seeker_lat: location.lat,
-        seeker_lng: location.lng
+        seeker_lat: currentLocation.lat ?? null,
+        seeker_lng: currentLocation.lng ?? null,
       });
 
       if (error) throw error;
@@ -111,6 +129,11 @@ export default function SeekerFeed() {
     <div className="space-y-4">
       <h2 className="text-2xl font-headline font-bold text-foreground mb-6">Nearby Professionals</h2>
       
+      {locationMessage && (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+          {locationMessage} <a href="/onboarding" className="font-semibold text-destructive underline">Set location</a>
+        </div>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {providers.map((provider) => {
           const details = provider.provider_details?.[0];

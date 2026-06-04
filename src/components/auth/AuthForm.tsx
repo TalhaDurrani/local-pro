@@ -79,7 +79,6 @@ const handleAuth = async (e: React.FormEvent) => {
             full_name: fullName,
             phone: cleanPhone,
             role: dbRole,
-            city: 'Lahore' 
           });
 
           if (profileError) {
@@ -92,9 +91,9 @@ const handleAuth = async (e: React.FormEvent) => {
             const { error: providerError } = await supabase.from('provider_details').insert({
               provider_id: signUpData.user.id,
               category: category,
-              hourly_rate: Number(rate)
+              hourly_rate: Number(rate),
             });
-            
+
             if (providerError) {
               console.error("Provider Error:", providerError);
               throw new Error(`Provider details failed: ${providerError.message}`);

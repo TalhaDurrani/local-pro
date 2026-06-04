@@ -12,7 +12,10 @@ interface UserProfile {
   phone: string;
   role: Role;
   city: string;
-  walletBalance?: number; 
+  walletBalance?: number;
+  latitude?: number | null;
+  longitude?: number | null;
+  display_address?: string | null;
 }
 
 interface AppContextType {
@@ -37,7 +40,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguage] = useState<Language>('en');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [isGlobalKillSwitchActive, setIsGlobalKillSwitchActive] = useState(false);
-  const [location, setLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
+  const [location, setLocation] = useState<{ lat: number | null; lng: number | null; address: string } | null>(null);
 
   const t = translations[language];
 
@@ -54,10 +57,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Check active session on load
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        await fetchProfile(session.user.id);
-      } else {
+      try {
+        const res = await supabase.auth.getSession();
+        const session = res?.data?.session;
+        if (session?.user) {
+          await fetchProfile(session.user.id);
+        } else {
+          setUser(null);
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("checkSession error:", err);
         setUser(null);
         setLoading(false);
       }
@@ -66,7 +76,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     checkSession();
 
     // Listen for auth changes (login/logout)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const onAuth = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         await fetchProfile(session.user.id);
       } else {
@@ -75,7 +85,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    return () => subscription.unsubscribe();
+    const subscription = onAuth?.data?.subscription;
+
+    return () => {
+      try {
+        if (subscription && typeof subscription.unsubscribe === 'function') {
+          subscription.unsubscribe();
+        }
+      } catch (e) {
+        // noop
+      }
+    };
   }, []);
 
   const fetchProfile = async (userId: string) => {
@@ -89,7 +109,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       .maybeSingle(); // FIX: Changed from .single() to .maybeSingle() to prevent 406 crashes
       
     if (data && !error) {
-      setUser(data as UserProfile);
+      const profile = data as UserProfile;
+      setUser(profile);
+      if (
+        profile.city ||
+        profile.province ||
+        profile.district ||
+        profile.nearest_landmark ||
+        (profile as any).latitude != null ||
+        (profile as any).longitude != null
+      ) {
+        setLocation({
+          lat: (profile as any).latitude ?? null,
+          lng: (profile as any).longitude ?? null,
+          address:
+            profile.nearest_landmark ||
+            profile.city ||
+            profile.district ||
+            profile.province ||
+            "",
+        });
+      }
     } else {
       setUser(null);
     }

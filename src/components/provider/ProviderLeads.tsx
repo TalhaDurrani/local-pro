@@ -54,6 +54,26 @@ export default function ProviderLeads() {
 
   useEffect(() => {
     fetchRequests();
+
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`service-requests-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'service_requests', filter: `provider_id=eq.${user.id}` },
+        () => fetchRequests()
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'service_requests', filter: `provider_id=eq.${user.id}` },
+        () => fetchRequests()
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
   }, [user]);
 
   const updateStatus = async (id: string, newStatus: string) => {

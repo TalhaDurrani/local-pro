@@ -20,7 +20,7 @@ import EditProfileDialog from "@/components/dashboard/EditProfileDialog";
 import ProviderLeads from "@/components/provider/ProviderLeads";
 
 export default function DashboardPage() {
-  const { user, loading, t } = useAppContext();
+  const { user, loading, t, location, setLocation } = useAppContext();
   const router = useRouter();
 
   useEffect(() => {
