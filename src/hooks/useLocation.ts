@@ -96,6 +96,12 @@ export function useLocation() {
       throw new Error("geolocation_unavailable");
     }
 
+    if (typeof window !== "undefined" && !window.isSecureContext) {
+      setError("Location detection requires a secure connection (https or localhost). Please enter your address manually.");
+      setLoading(false);
+      throw new Error("secure_origin_required");
+    }
+
     try {
       const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
         navigator.geolocation.getCurrentPosition(resolve, reject, {
@@ -134,23 +140,29 @@ export function useLocation() {
     setIsManual(true);
   }, []);
 
-  const saveToProfile = useCallback(async () => {
+  const saveToProfile = useCallback(async (values?: {
+    displayAddress?: string | null;
+    city?: string | null;
+    area?: string | null;
+    province?: string | null;
+  }) => {
     const currentUser = await supabase.auth.getUser();
     const user = currentUser?.data?.user;
     if (!user) throw new Error("not_authenticated");
-    if (!displayAddress) throw new Error("no_address_to_save");
+    const address = values?.displayAddress ?? displayAddress;
+    if (!address) throw new Error("no_address_to_save");
 
     const payload = {
       id: user.id,
-      city: city || undefined,
-      province: province || undefined,
-      district: area || undefined,
-      nearest_landmark: displayAddress || undefined,
+      city: values?.city ?? city ?? "Unknown",
+      province: values?.province ?? province ?? undefined,
+      district: values?.area ?? area ?? undefined,
+      nearest_landmark: address,
     };
 
     const { error } = await supabase.from("profiles").upsert(payload);
     if (error) throw error;
-  }, [coords, displayAddress, city, area, isManual]);
+  }, [displayAddress, city, area, province]);
 
   return {
     loading,

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAppContext } from "@/context/AppContext";
 import useLocation from "@/hooks/useLocation";
 import { Button } from "@/components/ui/button";
@@ -14,9 +14,16 @@ export default function OnboardingPage() {
   const [locating, setLocating] = useState(false);
   const [manualAddress, setManualAddress] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [secureOrigin, setSecureOrigin] = useState(true);
   const { location, setLocation, t } = useAppContext();
   const { loading, fetchLocation, setManualAddress: setManualLocation, saveToProfile } = useLocation();
   const router = useRouter();
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setSecureOrigin(window.isSecureContext === true);
+    }
+  }, []);
 
   const handleLocate = async () => {
     setErrorMessage(null);
@@ -30,7 +37,12 @@ export default function OnboardingPage() {
       };
       setLocation(newLoc);
       try {
-        await saveToProfile();
+        await saveToProfile({
+          displayAddress: result.displayAddress,
+          city: result.city,
+          area: result.area,
+          province: result.province,
+        });
       } catch (error: any) {
         console.warn("Unable to save detected location to profile:", error);
       }
@@ -47,10 +59,14 @@ export default function OnboardingPage() {
       return;
     }
     setErrorMessage(null);
-    setManualLocation(manualAddress.trim());
-    setLocation({ lat: null, lng: null, address: manualAddress.trim() });
+    const address = manualAddress.trim();
+    setManualLocation(address);
+    setLocation({ lat: null, lng: null, address });
     try {
-      await saveToProfile();
+      await saveToProfile({
+        displayAddress: address,
+        city: "Unknown",
+      });
     } catch (err: any) {
       setErrorMessage(err?.message || "Unable to save profile location.");
     }
@@ -99,6 +115,11 @@ export default function OnboardingPage() {
                     {locating || loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <MapPin className="h-4 w-4 mr-2" />}
                     {t.onboardingLocation}
                   </Button>
+                  {!secureOrigin && (
+                    <p className="mt-3 text-sm text-destructive text-center">
+                      Location detection requires a secure connection (HTTPS or localhost). Please use https:// or localhost, or enter your address manually.
+                    </p>
+                  )}
                   <div className="w-full">
                     <p className="mb-2 text-sm text-foreground/70">Or enter your address manually:</p>
                     <textarea

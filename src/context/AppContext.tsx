@@ -28,8 +28,8 @@ interface AppContextType {
   t: typeof translations.en;
   logout: () => Promise<void>;
   isGlobalKillSwitchActive: boolean;
-  location: { lat: number; lng: number; address: string } | null;
-  setLocation: (loc: { lat: number; lng: number; address: string } | null) => void;
+  location: { lat: number | null; lng: number | null; address: string } | null;
+  setLocation: (loc: { lat: number | null; lng: number | null; address: string } | null) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -43,6 +43,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useState<{ lat: number | null; lng: number | null; address: string } | null>(null);
 
   const t = translations[language];
+
+  const buildLocationFromProfile = (profile: any) => {
+    if (!profile) return null;
+    const address = profile.nearest_landmark ||
+      [profile.city, profile.district, profile.province].filter(Boolean).join(", ");
+    return {
+      lat: null,
+      lng: null,
+      address: address || "Location not set",
+    };
+  };
 
   const logout = async () => {
     setLoading(true);
@@ -111,27 +122,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (data && !error) {
       const profile = data as UserProfile;
       setUser(profile);
-      if (
-        profile.city ||
-        profile.province ||
-        profile.district ||
-        profile.nearest_landmark ||
-        (profile as any).latitude != null ||
-        (profile as any).longitude != null
-      ) {
-        setLocation({
-          lat: (profile as any).latitude ?? null,
-          lng: (profile as any).longitude ?? null,
-          address:
-            profile.nearest_landmark ||
-            profile.city ||
-            profile.district ||
-            profile.province ||
-            "",
-        });
-      }
+      setLocation(buildLocationFromProfile(profile));
     } else {
+      console.warn("Profile fetch failed or missing profile:", error);
+      if (error?.message?.includes("user from sub claim in JWT does not exist")) {
+        await supabase.auth.signOut();
+      }
       setUser(null);
+      setLocation(null);
     }
     setLoading(false);
   };
