@@ -1,179 +1,160 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAppContext } from "@/context/AppContext";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import Navbar from "@/components/layout/Navbar";
-import { supabase } from "@/lib/supabase";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Loader2, ShieldAlert, Gift, CheckCircle2, XCircle, Ban } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import AdminClient, { type AdminUser } from "@/components/admin/AdminClient";
+import { ShieldAlert } from "lucide-react";
 
-interface ProviderData {
-  id: string;
-  full_name: string;
-  phone: string;
-  city: string;
-  has_active_sub?: boolean;
-  is_banned?: boolean;
-  email?: string | null;
-  created_at?: string | null;
-  display_address?: string | null;
-  area?: string | null;
+export const dynamic = "force-dynamic";
+
+interface SearchParams {
+  q?: string;
+  role?: string;
+  page?: string;
 }
 
-export default function AdminDashboard() {
-  const { user, loading } = useAppContext();
-  const router = useRouter();
-  
-  const [providers, setProviders] = useState<ProviderData[]>([]);
-  const [fetching, setFetching] = useState(true);
-  const [processingId, setProcessingId] = useState<string | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+const PAGE_SIZE = 25;
 
-  useEffect(() => {
-    let isMounted = true;
-    const loadAdminData = async () => {
-      if (loading) return; 
-      if (!user || (user.role !== 'superadmin' && user.role !== 'admin')) {
-        router.push("/");
-        return;
-      }
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const params = await searchParams;
+  const supabase = await createClient();
 
-      try {
-        setFetching(true);
-        const { data: providerProfiles, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('role', 'provider');
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/auth?mode=login&next=/admin");
 
-        if (profileError) throw profileError;
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (me?.role !== "superadmin") redirect("/dashboard");
 
-        const now = new Date().toISOString();
-        const activeProviderIds = new Set(
-          (providerProfiles || [])
-            .filter(p => p.subscription_end_date && p.subscription_end_date > now)
-            .map(p => p.id)
-        );
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch (e: any) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="max-w-2xl mx-auto p-12 text-center">
+          <ShieldAlert className="h-10 w-10 text-destructive mx-auto mb-4" />
+          <h1 className="text-2xl font-bold mb-2">Admin client unavailable</h1>
+          <p className="text-muted-foreground">{e.message}</p>
+          <p className="text-xs text-muted-foreground mt-4">
+            Set <code>SUPABASE_SERVICE_ROLE_KEY</code> in <code>.env</code> and restart the server.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
-        const mergedData = (providerProfiles || []).map(p => ({
-          ...p,
-          has_active_sub: activeProviderIds.has(p.id)
-        })) as ProviderData[];
+  const page = Math.max(1, Number(params.page) || 1);
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+  const roleFilter = params.role && ["user", "provider", "superadmin"].includes(params.role) ? params.role : null;
+  const q = params.q?.trim() || null;
 
-        if (isMounted) setProviders(mergedData);
-      } catch (error: any) {
-        if (isMounted) setErrorMsg(error.message);
-      } finally {
-        if (isMounted) setFetching(false);
-      }
-    };
+  let profilesQuery = admin
+    .from("profiles")
+    .select(
+      "id, full_name, email, phone, role, province, city, district, nearest_landmark, is_banned, subscription_end_date, created_at",
+      { count: "exact" },
+    )
+    .order("created_at", { ascending: false })
+    .range(from, to);
 
-    loadAdminData();
-    return () => { isMounted = false; };
-  }, [user, loading, router]);
+  if (roleFilter) profilesQuery = profilesQuery.eq("role", roleFilter);
+  if (q) {
+    profilesQuery = profilesQuery.or(
+      `full_name.ilike.%${q}%,email.ilike.%${q}%,phone.ilike.%${q}%,city.ilike.%${q}%`,
+    );
+  }
 
-  const grantFreeTrial = async (providerId: string, providerName: string) => {
-    setProcessingId(providerId);
-    try {
-      const trialEnd = new Date();
-      trialEnd.setDate(trialEnd.getDate() + 14);
+  const { data: profilesData, count: total, error } = await profilesQuery;
+  const profiles = profilesData as Array<Record<string, unknown>> | null;
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="max-w-2xl mx-auto p-12 text-center">
+          <ShieldAlert className="h-10 w-10 text-destructive mx-auto mb-4" />
+          <p>{error.message}</p>
+        </div>
+      </div>
+    );
+  }
 
-      const { error } = await supabase.from('profiles')
-        .update({ subscription_end_date: trialEnd.toISOString() })
-        .eq('id', providerId);
+  const ids = (profiles || []).map((p) => p.id as string);
+  const detailsByProvider = new Map<
+    string,
+    { category: string | null; services_delivered: number | null; average_rating: number | null; is_online: boolean | null }
+  >();
+  if (ids.length) {
+    const { data: pdRows } = await admin
+      .from("provider_details")
+      .select("provider_id, category, services_delivered, average_rating, is_online")
+      .in("provider_id", ids);
+    ((pdRows as Array<Record<string, unknown>> | null) || []).forEach((r) =>
+      detailsByProvider.set(r.provider_id as string, {
+        category: (r.category as string | null) ?? null,
+        services_delivered: (r.services_delivered as number | null) ?? null,
+        average_rating: (r.average_rating as number | null) ?? null,
+        is_online: (r.is_online as boolean | null) ?? null,
+      }),
+    );
+  }
 
-      if (error) throw error;
-      await supabase.from('transactions').insert({ sender_id: providerId, amount: 0, transaction_type: 'free_trial', status: 'completed' });
+  const lastSignInById = new Map<string, string | null>();
+  try {
+    const { data: authList } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    (authList?.users || []).forEach((u: any) => lastSignInById.set(u.id, u.last_sign_in_at ?? null));
+  } catch {
+    /* ignore */
+  }
 
-      toast({ title: `14-Day Trial granted to ${providerName}!` });
-      setProviders(prev => prev.map(p => p.id === providerId ? { ...p, has_active_sub: true } : p));
-    } catch (error: any) {
-      toast({ title: "Failed to grant trial", description: error.message, variant: "destructive" });
-    } finally {
-      setProcessingId(null);
-    }
-  };
-
-  const toggleBanStatus = async (providerId: string, currentStatus: boolean, providerName: string) => {
-    setProcessingId(providerId);
-    try {
-      const { error } = await supabase.from('profiles')
-        .update({ is_banned: !currentStatus })
-        .eq('id', providerId);
-
-      if (error) throw error;
-
-      toast({ title: `${providerName} has been ${!currentStatus ? 'banned' : 'unbanned'}.` });
-      setProviders(prev => prev.map(p => p.id === providerId ? { ...p, is_banned: !currentStatus } : p));
-    } catch (error: any) {
-      toast({ title: "Action failed", description: error.message, variant: "destructive" });
-    } finally {
-      setProcessingId(null);
-    }
-  };
-
-  if (loading || fetching) return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-accent" /></div>;
-  if (errorMsg) return <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6"><ShieldAlert className="h-12 w-12 text-destructive mb-4" /><p>{errorMsg}</p></div>;
-  if (!user || (user.role !== 'superadmin' && user.role !== 'admin')) return null;
+  const users: AdminUser[] = (profiles || []).map((p) => ({
+    id: p.id as string,
+    full_name: (p.full_name as string) || "",
+    email: (p.email as string | null) ?? null,
+    phone: (p.phone as string) || "",
+    role: p.role as AdminUser["role"],
+    province: (p.province as string | null) ?? null,
+    city: (p.city as string) || "",
+    district: (p.district as string | null) ?? null,
+    nearest_landmark: (p.nearest_landmark as string | null) ?? null,
+    is_banned: !!p.is_banned,
+    subscription_end_date: (p.subscription_end_date as string | null) ?? null,
+    created_at: (p.created_at as string | null) ?? null,
+    last_sign_in_at: lastSignInById.get(p.id as string) ?? null,
+    provider_details: detailsByProvider.get(p.id as string) ?? null,
+  }));
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="p-6 md:p-12 max-w-7xl mx-auto space-y-8">
-        <div className="space-y-2">
+      <main className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
+        <header className="space-y-1">
           <h1 className="text-3xl md:text-4xl font-headline text-accent font-bold flex items-center gap-3">
             <ShieldAlert className="h-8 w-8" /> Superadmin Control
           </h1>
-        </div>
-
-        <Card className="shadow-xl">
-          <CardHeader><CardTitle className="text-foreground">Registered Providers</CardTitle></CardHeader>
-          <CardContent className="px-0 sm:px-6">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b text-xs uppercase text-muted-foreground">
-                    <th className="py-3 px-4">Name</th>
-                      <th className="py-3 px-4">Email</th>
-                      <th className="py-3 px-4">Phone</th>
-                      <th className="py-3 px-4">Joined</th>
-                      <th className="py-3 px-4">Location</th>
-                    <th className="py-3 px-4">Sub Status</th>
-                    <th className="py-3 px-4">Account Status</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {providers.map((p) => (
-                    <tr key={p.id} className={p.is_banned ? 'opacity-50 bg-destructive/5' : ''}>
-                        <td className="py-3 px-4 font-medium">{p.full_name}</td>
-                        <td className="py-3 px-4 text-muted-foreground">{p.email || '—'}</td>
-                        <td className="py-3 px-4 text-muted-foreground">{p.phone}</td>
-                        <td className="py-3 px-4 text-muted-foreground">{p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}</td>
-                        <td className="py-3 px-4 text-muted-foreground">{p.display_address || (p.city ? `${p.city}${p.area ? ', ' + p.area : ''}` : '—')}</td>
-                      <td className="py-3 px-4">
-                        {p.has_active_sub ? <span className="text-green-600 bg-green-100 px-2 py-1 rounded-md text-xs font-bold">Active</span> : <span className="text-red-600 bg-red-100 px-2 py-1 rounded-md text-xs font-bold">Expired</span>}
-                      </td>
-                      <td className="py-3 px-4">
-                        {p.is_banned ? <span className="text-destructive font-bold text-xs flex items-center"><Ban className="w-3 h-3 mr-1"/> Banned</span> : <span className="text-muted-foreground text-xs">Clear</span>}
-                      </td>
-                      <td className="py-3 px-4 flex justify-end gap-2">
-                        <Button size="sm" disabled={p.has_active_sub || processingId === p.id || p.is_banned} onClick={() => grantFreeTrial(p.id, p.full_name)}>
-                          <Gift className="h-4 w-4" />
-                        </Button>
-                        <Button size="sm" variant={p.is_banned ? "outline" : "destructive"} disabled={processingId === p.id} onClick={() => toggleBanStatus(p.id, !!p.is_banned, p.full_name)}>
-                          <Ban className="h-4 w-4" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+          <p className="text-muted-foreground">
+            Manage every user on the platform. Actions here are audit-logged.
+          </p>
+        </header>
+        <AdminClient
+          users={users}
+          total={total ?? users.length}
+          page={page}
+          pageSize={PAGE_SIZE}
+          initialQuery={q ?? ""}
+          initialRole={roleFilter ?? "all"}
+        />
       </main>
     </div>
   );

@@ -1,7 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "./supabase/client";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-// Changed to match your env variable name
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || '';
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Singleton browser client. Uses @supabase/ssr (cookie-based) so the session
+// is visible to middleware and Server Components.
+export const supabase = createClient();

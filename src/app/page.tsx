@@ -1,14 +1,31 @@
 
 "use client";
 
+import { useEffect } from "react";
 import Navbar from "@/components/layout/Navbar";
 import { Button } from "@/components/ui/button";
 import { useAppContext } from "@/context/AppContext";
-import { Search, MapPin, Star, Shield, ArrowRight } from "lucide-react";
+import { Search, MapPin, Star, Shield, ArrowRight, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
-  const { t } = useAppContext();
+  const { t, user, loading } = useAppContext();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && user) {
+      router.push("/dashboard");
+    }
+  }, [user, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-accent" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-accent selection:text-accent-foreground">
@@ -31,10 +48,10 @@ export default function Home() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
             <Button asChild size="lg" className="w-full sm:w-auto bg-accent text-accent-foreground hover:bg-accent/90 font-bold px-8 h-14 rounded-full text-lg shadow-xl shadow-accent/10">
-              <Link href="/auth">{t.signUp}</Link>
+              <Link href="/auth?mode=signup">{t.signUp}</Link>
             </Button>
-            <Button variant="outline" size="lg" className="w-full sm:w-auto border-border text-foreground hover:bg-accent/10 h-14 rounded-full px-8 text-lg glass">
-              {t.findServices}
+            <Button asChild variant="outline" size="lg" className="w-full sm:w-auto border-border text-foreground hover:bg-accent/10 h-14 rounded-full px-8 text-lg glass">
+              <Link href="/auth?mode=login">{t.logIn}</Link>
             </Button>
           </div>
         </div>

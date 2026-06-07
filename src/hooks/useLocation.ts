@@ -24,27 +24,17 @@ export function useLocation() {
 
   const reverseGeocode = useCallback(
     async (latitude: number, longitude: number): Promise<Omit<ReverseResult, "coords">> => {
-      const email = process.env.NEXT_PUBLIC_NOMINATIM_EMAIL || "";
-      const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=16&addressdetails=1&accept-language=en${
-        email ? `&email=${encodeURIComponent(email)}` : ""
-      }`;
-
-      const res = await fetch(url, {
-        headers: {
-          "Accept-Language": "en",
-        },
-      });
-
+      const res = await fetch(`/api/geocode/reverse?lat=${latitude}&lng=${longitude}`);
       if (!res.ok) {
-        throw new Error("Nominatim reverse geocode failed");
+        const body = await res.json().catch(() => ({}));
+        if (res.status === 422 && body?.error === "location_not_in_pk") {
+          throw new Error("location_not_in_pk");
+        }
+        throw new Error(body?.error || "Reverse geocode failed");
       }
-
-      const data = await res.json();
+      const json = await res.json();
+      const data = json.data;
       const address = data.address || {};
-
-      if (!address.country_code || address.country_code.toLowerCase() !== "pk") {
-        throw new Error("location_not_in_pk");
-      }
 
       const cityPriority = [
         "city",
@@ -63,8 +53,8 @@ export function useLocation() {
         "hamlet",
         "locality",
       ];
-      const cityVal = cityPriority.map((key) => address[key]).find(Boolean) || null;
-      const areaVal = areaPriority.map((key) => address[key]).find(Boolean) || null;
+      const cityVal = cityPriority.map((k) => address[k]).find(Boolean) || null;
+      const areaVal = areaPriority.map((k) => address[k]).find(Boolean) || null;
       const provinceVal = address.state || address.region || null;
 
       const parts: string[] = [];
@@ -82,7 +72,7 @@ export function useLocation() {
         raw: data,
       };
     },
-    []
+    [],
   );
 
   const fetchLocation = useCallback(async () => {
@@ -97,7 +87,7 @@ export function useLocation() {
     }
 
     if (typeof window !== "undefined" && !window.isSecureContext) {
-      setError("Location detection requires a secure connection (https or localhost). Please enter your address manually.");
+      setError("Location detection requires HTTPS or localhost.");
       setLoading(false);
       throw new Error("secure_origin_required");
     }
@@ -108,7 +98,7 @@ export function useLocation() {
           enableHighAccuracy: true,
           maximumAge: 10000,
           timeout: 20000,
-        })
+        }),
       );
 
       const latitude = pos.coords.latitude;
@@ -140,29 +130,31 @@ export function useLocation() {
     setIsManual(true);
   }, []);
 
-  const saveToProfile = useCallback(async (values?: {
-    displayAddress?: string | null;
-    city?: string | null;
-    area?: string | null;
-    province?: string | null;
-  }) => {
-    const currentUser = await supabase.auth.getUser();
-    const user = currentUser?.data?.user;
-    if (!user) throw new Error("not_authenticated");
-    const address = values?.displayAddress ?? displayAddress;
-    if (!address) throw new Error("no_address_to_save");
+  const saveToProfile = useCallback(
+    async (values?: {
+      displayAddress?: string | null;
+      city?: string | null;
+      area?: string | null;
+      province?: string | null;
+    }) => {
+      const currentUser = await supabase.auth.getUser();
+      const user = currentUser?.data?.user;
+      if (!user) throw new Error("not_authenticated");
+      const address = values?.displayAddress ?? displayAddress;
+      if (!address) throw new Error("no_address_to_save");
 
-    const payload = {
-      id: user.id,
-      city: values?.city ?? city ?? "Unknown",
-      province: values?.province ?? province ?? undefined,
-      district: values?.area ?? area ?? undefined,
-      nearest_landmark: address,
-    };
+      const payload: Record<string, unknown> = {
+        city: values?.city ?? city ?? undefined,
+        province: values?.province ?? province ?? undefined,
+        district: values?.area ?? area ?? undefined,
+        nearest_landmark: address,
+      };
 
-    const { error } = await supabase.from("profiles").upsert(payload);
-    if (error) throw error;
-  }, [displayAddress, city, area, province]);
+      const { error } = await supabase.from("profiles").update(payload).eq("id", user.id);
+      if (error) throw error;
+    },
+    [displayAddress, city, area, province],
+  );
 
   return {
     loading,

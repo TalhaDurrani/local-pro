@@ -71,9 +71,6 @@ export const translations = {
     wallet: 'Wallet',
     admin: 'Admin Panel',
     switchRole: 'Switch to {role}',
-    bioGenerator: 'AI Bio Assistant',
-    experience: 'Tell us about your experience',
-    generate: 'Generate Bio',
     categories: 'Categories',
     onboardingLocation: 'Detect Location',
     locationStatus: 'Location precisely mapped',
@@ -90,7 +87,6 @@ export const translations = {
     terminated: 'Terminated',
     urdu: 'اردو',
     english: 'English',
-    refinedBio: 'Refined Biography',
   },
   ur: {
     appName: 'پرو لوکل',
@@ -161,9 +157,6 @@ export const translations = {
     wallet: 'والٹ',
     admin: 'ایڈمن پینل',
     switchRole: 'تبدیل کریں {role}',
-    bioGenerator: 'AI بائیو اسسٹنٹ',
-    experience: 'اپنے تجربے کے بارے میں بتائیں',
-    generate: 'بائیو بنائیں',
     categories: 'زمرہ جات',
     onboardingLocation: 'مقام کا پتہ لگائیں',
     locationStatus: 'مقام کامیابی سے محفوظ ہو گیا',
@@ -180,6 +173,5 @@ export const translations = {
     terminated: 'ختم شدہ',
     urdu: 'اردو',
     english: 'انگریزی',
-    refinedBio: 'بہتر بائیو گرافی',
   }
 };
