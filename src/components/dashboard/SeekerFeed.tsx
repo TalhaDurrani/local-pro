@@ -11,6 +11,20 @@ import { toast } from "@/hooks/use-toast";
 import { PAKISTAN_DATA } from "@/lib/pakistan-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Check, ChevronsUpDown } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 
 interface ProviderDetails {
   category: string | null;
@@ -53,6 +67,9 @@ export default function SeekerFeed() {
   const [cityFilter, setCityFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  const [categoryOpen, setCategoryOpen] = useState(false);
+const [cityOpen, setCityOpen] = useState(false);
 
   useEffect(() => {
     if (user?.city) setCityFilter(user.city);
@@ -241,46 +258,135 @@ export default function SeekerFeed() {
             Clear Filters
           </Button>
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="md:col-span-2 relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by name..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-muted/50 border-border"
+  <div className="md:col-span-2 relative">
+    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+    <Input
+      placeholder="Search by name..."
+      value={searchQuery}
+      onChange={(e) => setSearchQuery(e.target.value)}
+      className="pl-10 bg-muted/50 border-border"
+    />
+  </div>
+
+  {/* Category Searchable Dropdown */}
+  <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
+    <PopoverTrigger asChild>
+      <Button
+        variant="outline"
+        role="combobox"
+        aria-expanded={categoryOpen}
+        className="justify-between bg-muted/50 border-border w-full"
+      >
+        {categoryFilter === "all" ? "All Categories" : categoryFilter}
+        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+      </Button>
+    </PopoverTrigger>
+
+    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+      <Command>
+        <CommandInput placeholder="Search category..." />
+        <CommandEmpty>No category found.</CommandEmpty>
+
+        <CommandGroup className="max-h-64 overflow-y-auto">
+          <CommandItem
+            value="all"
+            onSelect={() => {
+              setCategoryFilter("all");
+              setCategoryOpen(false);
+            }}
+          >
+            <Check
+              className={cn(
+                "mr-2 h-4 w-4",
+                categoryFilter === "all" ? "opacity-100" : "opacity-0"
+              )}
             />
-          </div>
+            All Categories
+          </CommandItem>
 
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="bg-muted/50 border-border">
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {CATEGORIES.map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {cat}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {CATEGORIES.map((cat) => (
+            <CommandItem
+              key={cat}
+              value={cat}
+              onSelect={() => {
+                setCategoryFilter(cat);
+                setCategoryOpen(false);
+              }}
+            >
+              <Check
+                className={cn(
+                  "mr-2 h-4 w-4",
+                  categoryFilter === cat ? "opacity-100" : "opacity-0"
+                )}
+              />
+              {cat}
+            </CommandItem>
+          ))}
+        </CommandGroup>
+      </Command>
+    </PopoverContent>
+  </Popover>
 
-          <Select value={cityFilter} onValueChange={setCityFilter}>
-            <SelectTrigger className="bg-muted/50 border-border">
-              <SelectValue placeholder="City" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Cities</SelectItem>
-              {allCities.map((city) => (
-                <SelectItem key={city} value={city}>
-                  {city}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+  {/* City Searchable Dropdown */}
+  <Popover open={cityOpen} onOpenChange={setCityOpen}>
+    <PopoverTrigger asChild>
+      <Button
+        variant="outline"
+        role="combobox"
+        aria-expanded={cityOpen}
+        className="justify-between bg-muted/50 border-border w-full"
+      >
+        {cityFilter === "all" ? "All Cities" : cityFilter}
+        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+      </Button>
+    </PopoverTrigger>
+
+    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+      <Command>
+        <CommandInput placeholder="Search city..." />
+        <CommandEmpty>No city found.</CommandEmpty>
+
+        <CommandGroup className="max-h-64 overflow-y-auto">
+          <CommandItem
+            value="all"
+            onSelect={() => {
+              setCityFilter("all");
+              setCityOpen(false);
+            }}
+          >
+            <Check
+              className={cn(
+                "mr-2 h-4 w-4",
+                cityFilter === "all" ? "opacity-100" : "opacity-0"
+              )}
+            />
+            All Cities
+          </CommandItem>
+
+          {allCities.map((city) => (
+            <CommandItem
+              key={city}
+              value={city}
+              onSelect={() => {
+                setCityFilter(city);
+                setCityOpen(false);
+              }}
+            >
+              <Check
+                className={cn(
+                  "mr-2 h-4 w-4",
+                  cityFilter === city ? "opacity-100" : "opacity-0"
+                )}
+              />
+              {city}
+            </CommandItem>
+          ))}
+        </CommandGroup>
+      </Command>
+    </PopoverContent>
+  </Popover>
+</div>
       </div>
 
       {locationMessage && (

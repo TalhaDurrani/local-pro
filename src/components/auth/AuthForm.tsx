@@ -367,7 +367,7 @@ export default function AuthForm() {
                   "space-y-4 border-t border-border pt-4 rounded-xl p-4 transition-colors animate-in fade-in slide-in-from-top-2",
                   locationComplete
                     ? "bg-emerald-500/5 border border-emerald-500/30"
-                    : "bg-destructive/5 border border-destructive/30",
+                    : "bg-yellow-500/5 border border-yellow-500/30",
                 )}
               >
                 <div className="flex items-center justify-between">
