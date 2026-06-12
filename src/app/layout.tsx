@@ -4,7 +4,7 @@ import { AppProvider } from '@/context/AppContext';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: 'ProLocal | Trusted Local Services',
+  title: 'ProLcal',
   description: 'Connect with local professionals for all your service needs.',
 };
 

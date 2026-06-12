@@ -25,6 +25,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
 import useLocation from "@/hooks/useLocation";
@@ -284,8 +285,16 @@ export default function AuthForm() {
 
   return (
     <Card className="w-full max-w-xl glass border-border shadow-xl">
-      <CardHeader>
-        <CardTitle className="text-2xl text-foreground font-headline text-center">
+      <CardHeader className="items-center text-center space-y-3">
+        <Image
+          src="/Pro-local.png"
+          alt="ProLocal logo"
+          width={64}
+          height={64}
+          priority
+          className="h-16 w-16 object-contain"
+        />
+        <CardTitle className="text-2xl text-foreground font-headline">
           {isLogin ? t.welcomeBackTitle : t.joinProLocal}
         </CardTitle>
       </CardHeader>
